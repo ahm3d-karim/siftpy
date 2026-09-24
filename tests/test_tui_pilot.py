@@ -27,6 +27,11 @@ def test_shell_mounts_renders_and_quits():
             assert len(menu.children) == len(MENU_ITEMS) == 8
             assert all(item.disabled for item in menu.children)
 
+            # `q` must actually quit: App.exit() sets this flag, so this asserts
+            # the binding works rather than just that the key could be pressed.
+            assert app._exit is False
             await pilot.press("q")
+            await pilot.pause()
+            assert app._exit is True
 
     asyncio.run(_run())
