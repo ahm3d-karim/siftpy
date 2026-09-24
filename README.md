@@ -9,17 +9,18 @@ Built for the workflow where every dataset arrives as a mystery file and the
 weight variable is tribal knowledge. Survey weights are first-class, and the
 output is a recipe you can rerun, not a report you have to trust.
 
-**Status: Stage 0 only.** The TUI shell (welcome banner, 8-item menu) and the
-CLI entry point exist; every menu item is disabled and labelled with the stage
-that turns it on. The plan, with per-stage done-when gates, lives outside the
-repo at `fde/siftpy-plan.md`.
+**Status: Stage 1.** The shell, the menu and the loader work: `o` opens a file
+picker, `.dta` / `.sav` / `.csv` load with their variable and value labels kept
+beside the frame, and a bad path becomes a readable notice instead of a
+traceback. Menu entries for later stages say which stage turns them on. The
+plan, with per-stage done-when gates, lives outside the repo at
+`fde/siftpy-plan.md`.
 
 ## Run it
 
 ```bash
 uv sync --extra test
-.venv/Scripts/python.exe -m siftpy.cli      # Windows
-python -m siftpy.cli                        # after `uv sync` anywhere
+uv run siftpy                  # or: .venv/Scripts/python.exe -m siftpy.cli
 ```
 
 Or as a tool from GitHub:
