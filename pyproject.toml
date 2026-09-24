@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "siftpy-cli"
+version = "0.1.0"
+description = "Survey-microdata profiler TUI: open .dta/.sav/.csv, profile columns, weights, cross-tabs, reproducible cleaning scripts."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+    "textual>=0.60",
+    "pandas>=2.0",
+    "pyreadstat>=1.1",
+]
+
+[project.scripts]
+siftpy = "siftpy.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
