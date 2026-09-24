@@ -16,10 +16,18 @@ from textual.containers import Vertical
 from textual.widgets import Footer, Header, Input, ListItem, ListView, Static
 
 from siftpy.core.loader import FileMeta, LoadError, read_file
+from siftpy.tui.screens import CrosstabScreen, DictionaryScreen, ProfileScreen, WeightsScreen
 
 __version__ = "0.1.0"
 
 POINTER = "▸"
+
+SCREENS = {
+    "Column profile (this file)": ProfileScreen,
+    "Label dictionary": DictionaryScreen,
+    "Weights & weighted stats": WeightsScreen,
+    "Cross-tab builder": CrosstabScreen,
+}
 
 BANNER = r"""
     _  __ _            
@@ -40,11 +48,11 @@ class MenuEntry:
 
 MENU: list[MenuEntry] = [
     MenuEntry("Open a data file", stage=1, built=True),
-    MenuEntry("Column profile (this file)", stage=2, needs_file=True),
-    MenuEntry("Label dictionary", stage=2, needs_file=True),
-    MenuEntry("Weights & weighted stats", stage=3, needs_file=True),
+    MenuEntry("Column profile (this file)", stage=2, built=True, needs_file=True),
+    MenuEntry("Label dictionary", stage=2, built=True, needs_file=True),
+    MenuEntry("Weights & weighted stats", stage=3, built=True, needs_file=True),
     MenuEntry("LLM suggestions (BYOK)", stage=4, needs_file=True),
-    MenuEntry("Cross-tab builder", stage=5, needs_file=True),
+    MenuEntry("Cross-tab builder", stage=5, built=True, needs_file=True),
     MenuEntry("Export: cleaning script", stage=6, needs_file=True),
     MenuEntry("Settings", stage=4),
 ]
@@ -90,6 +98,7 @@ class SiftApp(App):
         super().__init__()
         self.df = None
         self.meta: FileMeta | None = None
+        self.weight: str | None = None
 
     # ---------- layout ----------
 
@@ -131,24 +140,35 @@ class SiftApp(App):
 
     @on(ListView.Highlighted)
     def _on_highlighted(self, event: ListView.Highlighted) -> None:
+        if event.list_view.id != "menu":
+            return  # another screen's list: not ours to point at
         self._point_at(event.list_view.index)
 
     # ---------- actions ----------
 
     @on(ListView.Selected)
     def _on_selected(self, event: ListView.Selected) -> None:
+        # Screens bubble their own ListView.Selected up here. Only the main menu
+        # routes to a screen, or every screen with a list would trigger stage
+        # navigation on top of itself.
+        if event.list_view.id != "menu":
+            return
         entry = MENU[event.list_view.index or 0]
         if entry.label == "Open a data file":
             self.action_open_file()
             return
         if not entry.built:
-            if entry.needs_file and self.meta is None:
-                self._notice("[yellow]Open a file first[/yellow] — stage "
-                             f"{entry.stage} builds on it.")
-            else:
-                self._notice(f"[yellow]Stage {entry.stage}[/yellow] — not built yet.")
+            self._notice(f"[yellow]Stage {entry.stage}[/yellow] — not built yet.")
+            return
+        if entry.needs_file and self.meta is None:
+            self._notice("[yellow]Open a file first[/yellow] — this screen reads from one.")
+            return
+        screen = SCREENS.get(entry.label)
+        if screen is None:  # built but not routable: say so rather than do nothing
+            self._notice(f"[yellow]{entry.label}[/yellow] has no screen yet.")
             return
         self._notice("")
+        self.push_screen(screen())
 
     def action_open_file(self) -> None:
         box = self.query_one("#path-input", Input)
@@ -178,6 +198,7 @@ class SiftApp(App):
             self._notice(f"[red]{exc}[/red]")
             return False
         self.df, self.meta = df, meta
+        self.weight = None  # a weight belongs to the file it came from
         self.query_one("#status", Static).update(self._status_text())
         self._notice(self._hint_text())
         self.action_hide_input()

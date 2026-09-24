@@ -28,11 +28,12 @@ def rows(app: SiftApp) -> list[str]:
 def test_menu_label_puts_the_pointer_on_one_row_only():
     first = menu_label(0, True, MENU[0])
     second = menu_label(1, False, MENU[1])
+    unbuilt = menu_label(4, False, MENU[4])
 
     assert first.startswith("▸ Open a data file")
     assert second.startswith("  Column profile")
-    assert "(stage 2)" in second
-    assert "(stage" not in first  # built entries carry no stage tag
+    assert "(stage" not in second  # built entries carry no stage tag
+    assert "(stage 4)" in unbuilt  # the ones still to come say so
 
 
 def test_shell_mounts_with_a_pointer_on_row_one():
@@ -75,10 +76,26 @@ def test_unbuilt_entry_says_which_stage_it_belongs_to():
     async def _run() -> None:
         app = SiftApp()
         async with app.run_test() as pilot:
-            await pilot.press("down")  # Column profile — needs a file, stage 2
+            # index 4 = LLM suggestions (stage 4, not built)
+            for _ in range(4):
+                await pilot.press("down")
             await pilot.press("enter")
             notice = text_of(app.query_one("#notice", Static))
-            assert "Open a file first" in notice and "stage 2" in notice
+            assert "Stage 4" in notice and "not built yet" in notice
+
+            await pilot.press("q")
+
+    asyncio.run(_run())
+
+
+def test_a_file_screen_asks_for_a_file_first():
+    async def _run() -> None:
+        app = SiftApp()
+        async with app.run_test() as pilot:
+            await pilot.press("down")  # Column profile, built but needs a file
+            await pilot.press("enter")
+            notice = text_of(app.query_one("#notice", Static))
+            assert "Open a file first" in notice
 
             await pilot.press("q")
 
